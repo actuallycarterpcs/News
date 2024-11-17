@@ -1,0 +1,264 @@
+<html><head><base href="." target="_blank">
+<title>Random TV Player - Minecraft Style</title>
+<style>
+body {
+    background: #5c8752; /* Minecraft grass color */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    image-rendering: pixelated;
+}
+
+.tv-container {
+    position: relative;
+    width: 800px;
+}
+
+.tv {
+    background: #828282; /* Minecraft stone color */
+    padding: 60px;
+    border: 8px solid #373737; /* Dark border for block effect */
+    outline: 8px solid #636363; /* Middle tone */
+    image-rendering: pixelated;
+    box-shadow: 
+        inset -8px -8px 0 #373737,
+        inset 8px 8px 0 #9a9a9a;
+}
+
+.screen-bezel {
+    background: #373737;
+    padding: 20px;
+    border: 4px solid #636363;
+}
+
+.screen {
+    background: #000;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.screen iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.screen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        rgba(255,255,255,0.1) 50%,
+        rgba(0,0,0,0.1) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    opacity: 0.2;
+    z-index: 2;
+}
+
+.controls {
+    text-align: center;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.btn {
+    background: #707070;
+    color: #ffffff;
+    border: 4px solid #373737;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    image-rendering: pixelated;
+    box-shadow: 
+        inset -4px -4px 0 #373737,
+        inset 4px 4px 0 #9a9a9a;
+}
+
+.btn:hover {
+    background: #808080;
+}
+
+.btn:active {
+    box-shadow: 
+        inset 4px 4px 0 #373737,
+        inset -4px -4px 0 #9a9a9a;
+}
+
+.speaker-grills {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.speaker {
+    width: 80px;
+    height: 200px;
+    background: repeating-linear-gradient(
+        90deg,
+        #373737,
+        #373737 4px,
+        #636363 4px,
+        #636363 8px
+    );
+    border: 4px solid #373737;
+    image-rendering: pixelated;
+}
+
+#power-led {
+    width: 16px;
+    height: 16px;
+    background: #8b0000; /* Minecraft redstone color when off */
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    box-shadow: 0 0 10px rgba(139,0,0,0.5);
+    transition: all 0.3s;
+}
+
+.powered-on {
+    background: #ff0000 !important; /* Minecraft redstone color when on */
+    box-shadow: 0 0 10px rgba(255,0,0,0.5) !important;
+}
+
+.static-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h2v2H0zM2 2h2v2H2z' fill='%23fff' fill-opacity='0.3'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 3;
+    transition: opacity 0.3s;
+    image-rendering: pixelated;
+}
+
+.channel-change .static-overlay {
+    opacity: 0.8;
+}
+</style>
+</head>
+<body>
+
+<div class="tv-container">
+    <div class="tv">
+        <div class="screen-bezel">
+            <div class="screen">
+                <div id="player"></div>
+                <div class="static-overlay"></div>
+            </div>
+        </div>
+        <div class="speaker-grills">
+            <div class="speaker"></div>
+            <div class="speaker"></div>
+        </div>
+        <div class="controls">
+            <button class="btn" onclick="playRandomVideo()">Change Channel</button>
+            <button class="btn" onclick="togglePower()">Power</button>
+        </div>
+        <div id="power-led"></div>
+    </div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+const playlistId = 'PLu1-3ctFQaWqcnnh47Ki7RPH3kUXEx3nm';
+let player;
+let videoIds = [];
+let isPowered = false;
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            listType: 'playlist',
+            list: playlistId,
+            autoplay: 0,
+            controls: 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+}
+
+function onPlayerReady(event) {
+    const playlist = player.getPlaylist();
+    videoIds = playlist;
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED) {
+        playRandomVideo();
+    }
+}
+
+function playRandomVideo() {
+    if (!isPowered || !player || !videoIds.length) return;
+    
+    const screen = document.querySelector('.screen');
+    screen.classList.add('channel-change');
+    
+    setTimeout(() => {
+        const randomIndex = Math.floor(Math.random() * videoIds.length);
+        player.loadVideoById(videoIds[randomIndex]);
+        
+        setTimeout(() => {
+            screen.classList.remove('channel-change');
+        }, 500);
+    }, 300);
+}
+
+function togglePower() {
+    isPowered = !isPowered;
+    const powerLed = document.getElementById('power-led');
+    const screen = document.querySelector('.screen');
+    
+    if (isPowered) {
+        powerLed.classList.add('powered-on');
+        if (videoIds.length) {
+            videoIds = shuffleArray([...videoIds]);
+            playRandomVideo();
+        }
+    } else {
+        powerLed.classList.remove('powered-on');
+        if (player && player.pauseVideo) {
+            player.pauseVideo();
+        }
+        screen.classList.add('channel-change');
+        setTimeout(() => {
+            screen.classList.remove('channel-change');
+        }, 500);
+    }
+}
+</script>
+
+</body></html>
